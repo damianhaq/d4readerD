@@ -60,5 +60,81 @@ Aby gra zaczęła wysyłać teksty przedmiotów do zainstalowanej biblioteki `sa
 
 ### 1. Uruchomienie mikro-mostka Node.js
 W folderze projektu otwórz terminal i wpisz:
-```bash
-node server.js
+```bash node server.js
+(lub npm start)
+
+W terminalu pojawi się informacja:
+
+Plaintext
+[Named Pipe] Serwer potoku Windows aktywny pod ścieżką: \\.\pipe\d4lf
+[HTTP] Serwer webowy działa na: http://localhost:3000
+[HTTP] Strumień SSE dostępny pod: http://localhost:3000/stream
+2. Otwarcie aplikacji w przeglądarce
+Otwórz w przeglądarce adres: http://localhost:3000.
+
+Dioda statusu zmieni kolor na zielony („Połączono z serwerem (SSE)”).
+
+Otwórz konsolę deweloperską: naciśnij F12 (lub Ctrl + Shift + I) i przejdź do zakładki Console.
+
+3. Testowanie i użytkowanie
+Bez włączania gry (w oknie przeglądarki): Kliknij przycisk „Symuluj przedmiot z D4”. W konsoli F12 natychmiast zobaczysz przykładowy pakiet danych przedmiotu.
+
+Bez włączania gry (test pełnego potoku Named Pipe): W drugim oknie terminala wpisz:
+
+Bash
+node test_pipe.js
+(Domyślnie wysyła UTF-8. Możesz też przetestować UTF-16 wpisując node test_pipe.js utf16).
+
+Na żywo z grą: Uruchom Diablo 4, wejdź do gry i najedź kursorem myszy na dowolny przedmiot w ekwipunku lub na ziemi. Tekst przedmiotu w ułamku sekundy pojawi się w Twojej konsoli przeglądarki!
+
+Struktura Projektu
+Plaintext
+d4readerD/
+├── server.js          # Mikro-mostek: Named Pipe (\\.\pipe\d4lf) + Serwer HTTP / SSE
+├── index.html         # Interfejs Dark Mode ze wskaźnikiem stanu połączenia
+├── app.js             # Klient Vanilla JS (EventSource SSE + funkcja handleItemData)
+├── test_pipe.js       # Narzędzie testowe do wysyłania pakietów bezpośrednio do potoku
+├── package.json       # Podstawowy manifest projektu (scripts: start, test-pipe)
+├── .gitignore         # Ignorowanie plików logów, binarek .dll i certyfikatów
+└── README.md          # Dokumentacja projektu
+Pomysły na przyszłą rozbudowę (TODO)
+Kod został zaprojektowany tak, aby cała logika parsowania trafiała do jednej funkcji: handleItemData(rawText) w pliku app.js.
+
+Oto kilka sugerowanych kierunków dalszego rozwoju:
+
+Parser RegEx -> JSON:
+
+Wyciąganie nazwy przedmiotu, rzadkości (Zwykły, Święty, Starożytny, Legendarny, Unikatowy).
+
+Ekstrakcja liczbowej wartości Mocy Przedmiotu (Item Power).
+
+Odczyt podstawowych statystyk broni / pancerza (obrażenia na sekundę, pancerz).
+
+Parsowanie poszczególnych afiksów oraz oznaczeń Większego Afiksu (Greater Affix / GA).
+
+Filtrowanie duplikatów i Debounce:
+
+Gdy kursor pozostaje na przedmiocie, czytnik ekranu może wysyłać ten sam tekst wielokrotnie. Warto dodać prosty mechanizm zapamiętujący ostatni odebrany hash/tekst i ignorujący powtórzenia w odstępie np. 500 ms.
+
+Wizualne karty przedmiotów (UI):
+
+Renderowanie ładnych kafelków przedmiotów w interfejsie HTML w kolorach odpowiadających rzadkości (pomarańczowy dla legendarnych, unikalny brąz dla unikatów).
+
+Alerty dźwiękowe i integracje:
+
+Odtwarzanie dźwięku (np. Loot Filter drop sound) przy wykryciu poszukiwanego afiksu lub 2x/3x GA.
+
+Eksport danych lub wysyłanie powiadomień webhookiem na Discord.
+
+Licencja
+Projekt o charakterze edukacyjnym i otwartoźródłowym (MIT).
+Diablo 4 jest zastrzeżonym znakiem towarowym firmy Blizzard Entertainment.
+Projekt bazuje na idei przechwytywania ułatwień dostępu spopularyzowanej przez społeczność skupioną wokół narzędzia D4LF.
+
+
+<FollowUp label="Chcesz krótką ściągawkę z komend Git, żeby wypchnąć gotowy projekt prosto na GitHuba?" query="Podaj mi zestaw komend w terminalu (git init, add, commit, remote, push), żebym mógł od razu wrzucić ten projekt na nowe repozytorium na GitHubie."/>
+
+<ElicitationsGroup message="Zanim zamkniesz temat i wrzucisz paczkę na serwer, możemy jeszcze szybko dopiąć:">
+  <Elicitation label="Sprawdź plik .gitignore przed pierwszym commitem" query="Pokaż, co dokładnie powinno znaleźć się w pliku .gitignore dla tego projektu, żeby przypadkiem nie wrzucić na GitHuba plików tymczasowych, certyfikatów albo folderu .tools z signtool.exe."/>
+  <Elicitation label="Dodaj skrypt start.cmd do odpalania jednym kliknięciem" query="Napisz krótki plik start.cmd, który po dwukliku sam uruchomi node server.js i od razu otworzy http://localhost:3000 w domyślnej przeglądarce."/>
+</ElicitationsGroup>
