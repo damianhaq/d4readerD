@@ -1,0 +1,29 @@
+# Zależności Node.js (projekt nie wymaga zewnętrznych pakietów, ale na wypadek npm install)
+node_modules/
+package-lock.json
+
+# Pliki logów
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Pliki binarne, certyfikaty i klucze (np. saapi64.dll i certyfikaty z instalatora D4LF)
+*.dll
+*.cer
+*.pfx
+*.crt
+*.key
+
+# Pliki systemowe
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Edytory kodu i IDE
+.vscode/
+.idea/
+
+# Pliki środowiskowe
+.env
+.env.local

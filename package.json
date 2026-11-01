@@ -1,0 +1,19 @@
+{
+  "name": "d4reader",
+  "version": "1.0.0",
+  "description": "Minimalistyczny czytnik przedmiotów Diablo 4 przez Windows Named Pipe i SSE",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test-pipe": "node test_pipe.js"
+  },
+  "keywords": [
+    "diablo4",
+    "d4lf",
+    "named-pipe",
+    "sse",
+    "vanilla-js"
+  ],
+  "author": "",
+  "license": "MIT"
+}

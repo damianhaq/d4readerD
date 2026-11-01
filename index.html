@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D4 Reader - Czytnik Przedmiotów Diablo 4</title>
+    <style>
+        /* ====================================================================
+           RESET I STYL BAZOWY (Dark Mode)
+           ==================================================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f1012;
+            color: #e2e8f0;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2.5rem 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 720px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* ====================================================================
+           NAGŁÓWEK I LOGO
+           ==================================================================== */
+        header {
+            text-align: center;
+            border-bottom: 1px solid #23272f;
+            padding-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.85rem;
+            font-weight: 700;
+            color: #f8fafc;
+            letter-spacing: -0.025em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            margin-top: 0.35rem;
+        }
+
+        /* ====================================================================
+           KARTY I SEKCJE INTERFEJSU
+           ==================================================================== */
+        .card {
+            background-color: #17191e;
+            border: 1px solid #272a34;
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Wskaźnik statusu połączenia */
+        .status-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #ef4444; /* Domyślnie czerwony: rozłączony */
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Style dynamiczne sterowane klasami w app.js */
+        .status-connected .status-dot {
+            background-color: #22c55e; /* Zielony: połączono */
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+        }
+
+        .status-connecting .status-dot {
+            background-color: #eab308; /* Żółty: nawiązywanie połączenia */
+            box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
+        }
+
+        .status-disconnected .status-dot {
+            background-color: #ef4444; /* Czerwony: błąd / brak połączenia */
+        }
+
+        /* ====================================================================
+           SEKCJA PRZYCISKÓW I STEROWANIA
+           ==================================================================== */
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #b91c1c, #991b1b);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.4rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(185, 28, 28, 0.35);
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(220, 38, 38, 0.45);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* ====================================================================
+           PANEL INFORMACYJNY (KONSOLA DEVTOOLS)
+           ==================================================================== */
+        .hint-box {
+            background-color: #1a1e27;
+            border-left: 4px solid #3b82f6;
+            padding: 0.9rem 1.1rem;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .hint-box kbd {
+            background-color: #2e3442;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            padding: 0.15rem 0.4rem;
+            font-size: 0.85rem;
+            font-family: monospace;
+            color: #f1f5f9;
+        }
+
+        /* ====================================================================
+           PODGLĄD OSTATNIEGO PRZEDMIOTU
+           ==================================================================== */
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .preview-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        .counter-badge {
+            font-size: 0.8rem;
+            background-color: #272a34;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            color: #94a3b8;
+        }
+
+        pre {
+            background-color: #0b0c0e;
+            border: 1px solid #23272f;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .empty-placeholder {
+            color: #64748b;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Nagłówek aplikacji -->
+        <header>
+            <h1>⚔️ D4 Reader</h1>
+            <p class="subtitle">Mostek Named Pipe → SSE → Konsola przeglądarki</p>
+        </header>
+
+        <!-- Wskaźnik stanu połączenia z lokalnym serwerem SSE -->
+        <div class="card status-container">
+            <div>
+                <div style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.2rem;">
+                    Status połączenia
+                </div>
+                <div id="status-container" class="status-badge status-connecting">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Łączenie z serwerem SSE...</span>
+                </div>
+            </div>
+
+            <!-- Przycisk symulacji do testów bez włączania gry -->
+            <button id="simulate-btn" class="btn">
+                🧪 Symuluj przedmiot z D4
+            </button>
+        </div>
+
+        <!-- Wskazówka dotycząca konsoli deweloperskiej -->
+        <div class="hint-box">
+            💡 <strong>Główny cel:</strong> Otwórz konsolę deweloperską przeglądarki (<kbd>F12</kbd> lub <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>I</kbd> i przejdź do zakładki <strong>Console</strong>), aby zobaczyć surowe wyjście <code>console.log()</code> dla każdego przechwyconego przedmiotu.
+        </div>
+
+        <!-- Podgląd ostatnio odebranego pakietu danych -->
+        <div class="card">
+            <div class="preview-header">
+                <span class="preview-title">Ostatnio odebrany pakiet z gry (lub symulatora):</span>
+                <span id="items-counter" class="counter-badge">Odebrano: 0</span>
+            </div>
+            <pre><code id="raw-item-display" class="empty-placeholder">Oczekiwanie na najechanie kursorem na przedmiot w Diablo 4 lub kliknięcie przycisku symulacji...</code></pre>
+        </div>
+    </div>
+
+    <!-- Skrypt Vanilla JS obsługujący komunikację SSE i przetwarzanie danych -->
+    <script src="app.js"></script>
+</body>
+</html>
