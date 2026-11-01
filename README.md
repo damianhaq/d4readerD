@@ -118,3 +118,69 @@ Oto kilka sugerowanych kierunków dalszego rozwoju:
 Projekt o charakterze edukacyjnym i otwartoźródłowym (MIT).
 Diablo 4 jest zastrzeżonym znakiem towarowym firmy Blizzard Entertainment.
 Projekt bazuje na idei przechwytywania ułatwień dostępu spopularyzowanej przez społeczność skupioną wokół narzędzia D4LF.
+
+
+## Integracja z bazami buildów (Mobalytics / Maxroll) - Notatki na przyszłość
+
+Aby aplikacja mogła w przyszłości automatycznie porównywać zeskanowany przedmiot z założonym poradnikiem (tzw. Loot Filter / Build Tracker), może pobierać strukturę buildu w formacie JSON bezpośrednio z serwisów **Mobalytics** lub **Maxroll**.
+
+### 1. Architektura pobierania (Omijanie blokady CORS)
+
+Przeglądarka internetowa (`app.js`) nie może pobrać kodu strony Mobalytics ani Maxroll bezpośrednio za pomocą `fetch()` ze względu na politykę bezpieczeństwa **CORS** (Cross-Origin Resource Sharing). 
+
+**Rozwiązanie:** Zapytanie musi przechodzić przez nasz lokalny serwer Node.js (`server.js`), którego blokada CORS nie dotyczy:
+1. Przeglądarka wysyła link do buildu na lokalny endpoint, np. `http://localhost:3000/import?url=https://mobalytics.gg/...`
+2. Plik `server.js` pobiera dane ze strony za pomocą wbudowanego w Node.js (od wersji 18+) natywnego `fetch()`, wyciąga czysty obiekt JSON i odsyła go do `app.js`.
+
+### 2. Metoda A: Pozyskiwanie buildu z Mobalytics.gg (Rekomendowana)
+
+Strona Mobalytics działa w oparciu o framework **Next.js**. Oznacza to, że pełny zestaw danych o buildzie w formacie JSON jest zaszyty bezpośrednio w kodzie źródłowym HTML strony wewnątrz znacznika `<script id="__NEXT_DATA__" type="application/json">`.
+
+**Zalety Mobalytics:**
+- Nie wymaga autoryzacji ani zewnętrznych słowników.
+- Wewnątrz ścieżki `props.pageProps.apolloState` znajdują się czytelne, tekstowe nazwy przedmiotów, aspektów oraz pożądanych afiksów (np. `"Cooldown Reduction"`, `"Intelligence"`, `"Ranks to Hydra"`).
+
+**Przykładowa funkcja do wklejenia w `server.js`:**
+
+~~~javascript
+async function fetchMobalyticsBuild(buildUrl) {
+    // 1. Pobranie surowego kodu HTML strony z poradnikiem
+    const response = await fetch(buildUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+    });
+    const html = await response.text();
+
+    // 2. Wycięcie zawartości znacznika __NEXT_DATA__ za pomocą RegEx
+    const regex = /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/;
+    const match = html.match(regex);
+
+    if (match && match[1]) {
+        // 3. Parsowanie wyciętego tekstu do obiektu JSON
+        const fullData = JSON.parse(match[1]);
+        return fullData.props.pageProps; // Pełne dane buildu (apolloState)
+    }
+    throw new Error('Nie znaleziono danych JSON (__NEXT_DATA__) na stronie Mobalytics.');
+}
+~~~
+
+### 3. Metoda B: Pozyskiwanie buildu z Maxroll.gg (Wewnętrzne API Plannera)
+
+Maxroll nie przechowuje danych buildu bezpośrednio w kodzie HTML, lecz ładuje je dynamicznie ze swojego wewnętrznego API.
+
+**Jak pobrać JSON z Maxrolla:**
+1. **Z linku do Plannera (`maxroll.gg/d4/planner/abcd1234`):** Wyciągamy identyfikator z końca adresu URL (w tym przykładzie: `abcd1234`).
+2. **Z linku do poradnika (`maxroll.gg/d4/build-guides/...`):** Pobieramy kod HTML strony i szukamy wyrażeniem regularnym atrybutu `data-d4-profile="abcd1234"`, który zawiera identyfikator powiązanego plannera.
+3. **Zapytanie do API:** Wysyłamy zapytanie `GET` bezpośrednio pod adres:
+
+~~~text
+https://planners.maxroll.gg/profiles/load/d4/<ID_PLANNERA>
+~~~
+
+**Ważne ograniczenie Maxrolla (Słownik ID):**
+Zwrócony przez Maxroll plik JSON jest silnie skompresowany — zamiast tekstowych nazw statystyk zawiera numeryczne identyfikatory (np. `"affixes": [10452, 9912]`). Aby przetłumaczyć te numery na czytelne nazwy afiksów, należy dodatkowo pobrać z serwerów Maxrolla ich główny plik bazodanowy (`data.json`) i zmapować numery ID na odpowiadające im nazwy tekstowe. Z tego powodu na start znacznie łatwiejsza w implementacji jest integracja z **Mobalytics**.
+
+### 4. Kwestia językowa przy porównywaniu przedmiotów (PL vs EN)
+
+Zarówno Mobalytics, jak i Maxroll zwracają nazwy afiksów i aspektów w **języku angielskim**, natomiast czytnik ekranowy (TTS) wysyła tekst w języku ustawionym obecnie w grze Diablo 4. Przy budowie modułu porównującego można podejść do tego na dwa sposoby:
+- **Rozwiązanie proste:** Ustawienie języka tekstu w opcjach Diablo 4 na angielski (wówczas dane z TTS i z Mobalyticsa są w tym samym języku i można je porównywać bezpośrednio).
+- **Rozwiązanie zaawansowane:** Stworzenie w pliku `słownik.js` prostej mapy tłumaczeń (klucz angielski z Mobalytics na polskie wyrażenie regularne dopasowane do tekstu z gry).
